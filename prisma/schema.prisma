@@ -1,0 +1,110 @@
+// 営業日報システム
+// docs/er-diagram.md の ER図をもとに定義している。ER図を変えたらここも合わせて直す。
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// 接続先 URL は prisma.config.ts で指定する（Prisma ORM 7 以降）
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SALES
+  MANAGER
+}
+
+enum ReportStatus {
+  DRAFT
+  SUBMITTED
+}
+
+enum CommentTarget {
+  PROBLEM
+  PLAN
+}
+
+/// 営業マスタ（上長も role = MANAGER で登録する）
+model SalesStaff {
+  id           BigInt  @id @default(autoincrement())
+  name         String  @db.VarChar(50)
+  email        String  @unique @db.VarChar(255)
+  passwordHash String  @map("password_hash") @db.VarChar(255)
+  department   String? @db.VarChar(50)
+  role         Role
+  isActive     Boolean @default(true) @map("is_active")
+
+  dailyReports DailyReport[]
+  comments     Comment[]
+
+  @@map("sales_staff")
+}
+
+/// 顧客マスタ
+model Customer {
+  id       BigInt  @id @default(autoincrement())
+  name     String  @db.VarChar(100)
+  address  String? @db.VarChar(200)
+  phone    String? @db.VarChar(20)
+  isActive Boolean @default(true) @map("is_active")
+
+  visitRecords VisitRecord[]
+
+  @@map("customer")
+}
+
+/// 日報（1人1日1件）
+model DailyReport {
+  id           BigInt       @id @default(autoincrement())
+  salesStaffId BigInt       @map("sales_staff_id")
+  reportDate   DateTime     @map("report_date") @db.Date
+  problem      String?      @db.Text
+  plan         String?      @db.Text
+  status       ReportStatus @default(DRAFT)
+  submittedAt  DateTime?    @map("submitted_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  salesStaff   SalesStaff    @relation(fields: [salesStaffId], references: [id])
+  visitRecords VisitRecord[]
+  comments     Comment[]
+
+  @@unique([salesStaffId, reportDate])
+  @@index([reportDate])
+  @@map("daily_report")
+}
+
+/// 訪問記録（同じ日に同じ顧客を複数回訪問しても別の行として登録できる）
+model VisitRecord {
+  id            BigInt    @id @default(autoincrement())
+  dailyReportId BigInt    @map("daily_report_id")
+  customerId    BigInt    @map("customer_id")
+  visitedAt     DateTime? @map("visited_at") @db.Time(0)
+  content       String?   @db.Text
+  sortOrder     Int       @map("sort_order")
+
+  dailyReport DailyReport @relation(fields: [dailyReportId], references: [id], onDelete: Cascade)
+  customer    Customer    @relation(fields: [customerId], references: [id])
+
+  @@index([dailyReportId])
+  @@index([customerId])
+  @@map("visit_record")
+}
+
+/// コメント（上長が Problem / Plan につける）
+model Comment {
+  id            BigInt        @id @default(autoincrement())
+  dailyReportId BigInt        @map("daily_report_id")
+  commenterId   BigInt        @map("commenter_id")
+  target        CommentTarget
+  body          String        @db.Text
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  dailyReport DailyReport @relation(fields: [dailyReportId], references: [id])
+  commenter   SalesStaff  @relation(fields: [commenterId], references: [id])
+
+  @@index([dailyReportId])
+  @@map("comment")
+}
