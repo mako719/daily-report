@@ -4,14 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 現状
 
-営業日報システムの設計段階。リポジトリには `docs/` の設計資料と `prisma/schema.prisma` しかなく、アプリのソースコード・ビルド設定はまだない。実装を始めたら、ビルド・テスト・起動コマンドをこのファイルに追記すること。
+営業日報システムの実装を始めた段階。Next.js のプロジェクト（`src/app/`）ができたところで、DB・API・画面はまだない。進める順番は GitHub の Issue #29（実装ロードマップ）にある。コマンドが増えたら下の「コマンド」に追記すること。
 
 このプロジェクトの目的は「Claude と一緒に、要件定義から実装・テストまでの流れを一通り体験すること」。作り込みよりも各工程を最後まで通すことを優先する。
+
+## コマンド
+
+- `npm run dev` — 開発サーバー（http://localhost:3000）
+- `npm run build` — 本番ビルド
+- `npm run typecheck` — 型チェック（`next typegen` でルートの型を作ってから `tsc --noEmit`）
+
+ESLint は入れていない（決定済み）。
 
 ## 使用技術
 
 - 言語：TypeScript
-- フレームワーク：Next.js（App Router）
+- フレームワーク：Next.js 16（App Router、`src/` ディレクトリ、Turbopack）。`next.config.ts` で `cacheComponents` が有効（`create-next-app` の初期値）
 - UI コンポーネント：shadcn/ui + Tailwind CSS
 - API スキーマ定義：OpenAPI（Zod による検証）
 - DB スキーマ定義：Prisma（`prisma/schema.prisma`）
